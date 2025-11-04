@@ -27,26 +27,23 @@ require("lazy").setup({
 	},
 })
 
-local dap = require("dap")
-local dapui = require("dapui")
+vim.api.nvim_create_autocmd("LspAttach", {
+    callback = function (ev)
+        local nmap = function(keys, func, desc)
+            if desc then
+                desc = 'LSP: ' .. desc
+            end
 
--- nvim-dap
-vim.keymap.set("n", "dc", dap.continue)
-vim.keymap.set("n", "dp", dap.pause)
-vim.keymap.set("n", "ds", function()
-	dap.disconnect()
-	dap.close()
-end)
-vim.keymap.set("n", "dt", dap.toggle_breakpoint)
-vim.keymap.set("n", "dsi", dap.step_into)
-vim.keymap.set("n", "dso", dap.step_over)
-vim.keymap.set("n", "dr", dap.repl.open)
+            vim.keymap.set('n', keys, func, { buffer = ev.buf, desc = desc})
+        end
 
--- nvim-dap-ui
-vim.keymap.set("n", "<leader>du", function()
-	dapui.toggle()
-	vim.api.nvim_exec2("Neotree toggle", {})
-end)
+        nmap("<leader>ca", function()
+            vim.lsp.buf.code_action { context = {
+                only = { 'quickfix', 'refactor', 'source'}}}
+        end, 'Code Action')
+        nmap("<leader>rn", vim.lsp.buf.rename, 'Rename')
+    end
+})
 
 local swift_lsp = vim.api.nvim_create_augroup("swift_lsp", { clear = true })
 vim.api.nvim_create_autocmd("FileType", {

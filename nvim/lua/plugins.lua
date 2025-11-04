@@ -8,38 +8,65 @@ return {
             transparent_background = true,
             background = { -- :h background
                 light = "latte",
-                dark = "mocha",
+                dark = "macchiato",
             },
-            integrations = {
-                cmp = true,
-                gitsigns = true,
+            custom_highlights = function(colors)
+                return {
+                    LineNr = { fg = colors.subtext1 },
+                    LineNrAbove = { fg = colors.overlay1 },
+                    LineNrBelow = { fg = colors.overlay1 }
+                }
+            end,
+            auto_integrations = true
+        },
+    },
+    {
+        "nvim-pack/nvim-spectre",
+        keys = {
+            {
+                "<leader>S",
+                function()
+                    require("spectre").toggle()
+                end,
+                desc = "Toggle Spectre"
+            },
+            {
+                "<leader>sw",
+                function()
+                    require("spectre").open_visual({select_word = true})
+                end,
+                desc = "Search current word"
+            },
+            {
+                "<leader>sw",
+                function()
+                    require("spectre").open_visual()
+                end,
+                mode = 'v',
+                desc = "Search current word"
+            },
+            {
+                "<leader>sp",
+                function()
+                    require("spectre").open_file_search({select_word = true})
+                end,
+                desc = "Search in current file"
             },
         },
+        dependencies = {
+            "nvim-lua/plenary.nvim"
+        }
     },
     {
         "nvim-neo-tree/neo-tree.nvim",
         cmd = "Neotree",
         version = "^3.0",
-        init = function()
-            -- FIX: use `autocmd` for lazy-loading neo-tree instead of directly requiring it,
-            -- because `cwd` is not set up properly.
-            vim.api.nvim_create_autocmd("BufEnter", {
-                group = vim.api.nvim_create_augroup("Neotree_start_directory", { clear = true }),
-                desc = "Start Neo-tree with directory",
-                once = true,
-                callback = function()
-                    if package.loaded["neo-tree"] then
-                        return
-                    else
-                        local stats = vim.uv.fs_stat(vim.fn.argv(0))
-                        if stats and stats.type == "directory" then
-                            require("neo-tree")
-                        end
-                    end
-                end,
-            })
+        deactivate = function()
+            vim.cmd([[Neotree close]])
         end,
+        lazy = false,
         opts = {
+            open_on_setup = true,
             event_handlers = {
                 {
                     event = "neo_tree_buffer_enter",
@@ -49,10 +76,16 @@ return {
                 }
             },
             filesystem = {
+                use_libuv_file_watcher = true,
                 filtered_items = {
                     visible = true 
-                }
-            }
+                },
+                hijack_netrw_behaviour = 'open_current'
+            },
+        },
+        keys = {
+            { "<leader>nt", function() vim.cmd("Neotree toggle") end,
+                desc = "neo-tree: Toggle" }
         },
         dependencies = {
             "nvim-lua/plenary.nvim",
@@ -60,8 +93,6 @@ return {
             "MunifTanjim/nui.nvim",
             -- "3rd/image.nvim", -- Optional image support in preview window: See `# Preview Mode` for more information
         }
-    },
-    {
     },
     {
         "ggandor/leap.nvim",
@@ -94,18 +125,21 @@ return {
                 function()
                     require("telescope.builtin").find_files()
                 end,
+                desc = "Telescope: Find in files"
             },
             {
                 "<leader>gf",
                 function()
                     require("telescope.builtin").git_files()
                 end,
+                desc = "Telescope: Find in Git cache"
             },
             {
                 "<leader>ps",
                 function()
                     require("telescope.builtin").grep_string({ search = vim.fn.input("Grep > ") })
                 end,
+                desc = "Telescope: Find by word"
             },
         },
     },
@@ -122,6 +156,7 @@ return {
                     "javascript",
                     "typescript",
                     "c",
+                    "go",
                     "zig",
                     "lua",
                     "rust",
@@ -154,34 +189,147 @@ return {
         end
     },
     {
-        "theprimeagen/harpoon",
+        "mason-org/mason.nvim",
+        version = "^2.0",
+        opts = {}
+    },
+    {
+        "mason-org/mason-lspconfig.nvim",
+        version = "^2.0",
+        opts = {
+            ensure_installed = {
+                "rust_analyzer",
+                "phpactor",
+                "gopls",
+                "bashls",
+                "clangd",
+                "spectral",
+                "cssls"
+            }
+        },
+    },
+    {
+        "neovim/nvim-lspconfig",
+        version = "^2.0",
+    },
+    {
+        "saghen/blink.cmp",
+        -- optional: provides snippets for the snippet source
+        dependencies = { "rafamadriz/friendly-snippets" },
+
+        -- Use a release tag to download pre-built binaries
+        version = "*",
+        -- AND/OR build from source, requires nightly: https://rust-lang.github.io/rustup/concepts/channels.html#working-with-nightly-rust
+        -- build = 'cargo build --release',
+        -- If you use nix, you can build from source using the latest nightly rust with:
+        -- build = 'nix run .#build-plugin',
+
+        opts = {
+            -- 'default' (recommended) for mappings similar to built-in completions (C-y to accept)
+            -- 'super-tab' for mappings similar to VSCode (tab to accept)
+            -- 'enter' for enter to accept
+            -- 'none' for no mappings
+            --
+            -- All presets have the following mappings:
+            -- C-space: Open menu or open docs if already open
+            -- C-n/C-p or Up/Down: Select next/previous item
+            -- C-e: Hide menu
+            -- C-k: Toggle signature help (if signature.enabled = true)
+            --
+            -- See :h blink-cmp-config-keymap for defining your own keymap
+            keymap = {
+                -- Each keymap may be a list of commands and/or functions
+                preset = "enter",
+                -- Select completions
+                ["<Up>"] = { "select_prev", "fallback" },
+                ["<Down>"] = { "select_next", "fallback" },
+                ["<Tab>"] = { "select_next", "fallback" },
+                ["<S-Tab>"] = { "select_prev", "fallback" },
+                -- Scroll documentation
+                ["<C-b>"] = { "scroll_documentation_up", "fallback" },
+                ["<C-f>"] = { "scroll_documentation_down", "fallback" },
+                -- Show/hide signature
+                ["<C-k>"] = { "show_signature", "hide_signature", "fallback" },
+                ["<C-S-K>"] = { "show", "hide", "fallback" }
+            },
+
+            appearance = {
+                -- 'mono' (default) for 'Nerd Font Mono' or 'normal' for 'Nerd Font'
+                -- Adjusts spacing to ensure icons are aligned
+                nerd_font_variant = "mono",
+            },
+
+            sources = {
+                -- `lsp`, `buffer`, `snippets`, `path`, and `omni` are built-in
+                -- so you don't need to define them in `sources.providers`
+                default = { "lsp", "path", "snippets", "buffer" },
+
+                -- Sources are configured via the sources.providers table
+            },
+
+            -- (Default) Rust fuzzy matcher for typo resistance and significantly better performance
+            -- You may use a lua implementation instead by using `implementation = "lua"` or fallback to the lua implementation,
+            -- when the Rust fuzzy matcher is not available, by using `implementation = "prefer_rust"`
+            --
+            -- See the fuzzy documentation for more information
+            fuzzy = { implementation = "prefer_rust_with_warning" },
+            completion = {
+                -- The keyword should only match against the text before
+                keyword = { range = "prefix" },
+                menu = {
+                    -- Use treesitter to highlight the label text for the given list of sources
+                    draw = {
+                        treesitter = { "lsp" },
+                    },
+                },
+                -- Show completions after typing a trigger character, defined by the source
+                trigger = { show_on_trigger_character = true },
+                documentation = {
+                    -- Show documentation automatically
+                    auto_show = true,
+                },
+            },
+
+            -- Signature help when tying
+            signature = { enabled = true },
+        },
+        opts_extend = { "sources.default" },
+    },
+    {
+        "ThePrimeagen/harpoon",
         branch = "harpoon2",
         dependencies = { "nvim-lua/plenary.nvim" },
-        opts = {},
+        config = function () require("harpoon").setup({}) end,
         keys = {
-            { "<leader>h", function() require("harpoon").list():add() end },
-            { "<C-S>", function() require("harpoon").ui:toggle_quick_menu(require("harpoon"):list()) end },
-            { "<leader>1", function() require("harpoon"):list():select(1) end },
-            { "<leader>2", function() require("harpoon"):list():select(2) end },
-            { "<leader>3", function() require("harpoon"):list():select(3) end },
-            { "<leader>4", function() require("harpoon"):list():select(4) end },
-            { "<leader>5", function() require("harpoon"):list():select(5) end },
-            { "<leader>6", function() require("harpoon"):list():select(6) end },
-            { "<leader>7", function() require("harpoon"):list():select(7) end },
-            { "<leader>8", function() require("harpoon"):list():select(8) end },
-            { "<leader>9", function() require("harpoon"):list():select(9) end },
+            { "<leader>hh", function() require("harpoon"):list():add() end,
+                desc = "Harpoon: Add to list" },
+            { "<C-z>", function() require("harpoon").ui:toggle_quick_menu(require("harpoon"):list()) end,
+                desc = "Harpoon: Open list" },
+            { "<leader>1", function() require("harpoon"):list():select(1) end,
+                desc = "Harpoon: Jump to list item 1" },
+            { "<leader>2", function() require("harpoon"):list():select(2) end,
+                desc = "Harpoon: Jump to list item 2" },
+            { "<leader>3", function() require("harpoon"):list():select(3) end,
+                desc = "Harpoon: Jump to list item 3" },
+            { "<leader>4", function() require("harpoon"):list():select(4) end,
+                desc = "Harpoon: Jump to list item 4" },
+            { "<leader>5", function() require("harpoon"):list():select(5) end,
+                desc = "Harpoon: Jump to list item 5" },
+            { "<leader>6", function() require("harpoon"):list():select(6) end,
+                desc = "Harpoon: Jump to list item 6" },
+            { "<leader>7", function() require("harpoon"):list():select(7) end,
+                desc = "Harpoon: Jump to list item 7" },
+            { "<leader>8", function() require("harpoon"):list():select(8) end,
+                desc = "Harpoon: Jump to list item 8" },
+            { "<leader>9", function() require("harpoon"):list():select(9) end,
+                desc = "Harpoon: Jump to list item 9" },
         },
     },
     {
         "mbbill/undotree",
         version = "^6.0",
         keys = {
-            {
-                "<leader>u",
-                function()
-                    vim.cmd.UndotreeToggle()
-                end,
-            },
+            { "<leader>u", vim.cmd.UndotreeToggle, desc = "Open undo tree" },
         },
     },
     {
@@ -204,38 +352,27 @@ return {
     "tpope/vim-rhubarb",
     { "tpope/vim-commentary", version = "^1.0" },
     {
-        "freddiehaddad/feline.nvim",
-        version = "^1.0",
-        opts = {},
-        config = function(_, opts)
-            local ctp_feline = require("catppuccin.groups.integrations.feline")
-
-            require("feline").setup({
-                components = ctp_feline.get(),
-            })
-
-            local winbar_components = {
-                active = {},
-                inactive = {},
-            }
-
-            table.insert(winbar_components.active, {})
-            table.insert(winbar_components.active[1], {
-                provider = {
-                    name = "file_info",
-                    opts = {
-                        type = "relative",
-                    },
+        "nvim-lualine/lualine.nvim",
+        dependencies = { "nvim-tree/nvim-web-devicons", opt = true },
+        opts = {
+            options = {
+                theme = "catppuccin",
+                section_separators = {
+                    right = "",
+                    left = ""
                 },
-            })
-
-            require("feline").winbar.setup({
-                components = winbar_components,
-            })
-
-            -- later to be set up, if i feel that way
-            -- require('feline').statuscolumn.setup()
-        end,
+            },
+            sections = {
+                lualine_y = {
+                    "location"
+                },
+                lualine_z = {
+                    function ()
+                        return os.date("%a %d/%m %H:%M:%S", os.time())
+                    end
+                }
+            }
+        }
     },
     {
         "saecki/crates.nvim",
@@ -297,8 +434,8 @@ return {
         opts = {},
         lazy = false,
         keys = {
-            { "<leader>tdt", "<cmd>Trouble todo<CR>" },
-            { "<leader>tts", "<cmd>TodoTelescope<CR>" },
+            { "<leader>tdt", "<cmd>Trouble todo<CR>", desc = "Todo: Open in Trouble" },
+            { "<leader>tts", "<cmd>TodoTelescope<CR>", desc = "Todo: Open in Telescope" },
         },
     },
     {
@@ -313,8 +450,13 @@ return {
         },
     },
     {
+        'jedrzejboczar/nvim-dap-cortex-debug',
+        opts = {},
+        dependencies = {'mfussenegger/nvim-dap'}
+    },
+    {
         "mfussenegger/nvim-dap",
-        version = "~0.8",
+        -- version = "~0.10",
         config = function(_, _)
             local dap = require("dap")
 
@@ -350,14 +492,63 @@ return {
 
             dap.configurations.cpp = codelldbConf
             dap.configurations.c = codelldbConf
-
-            require("dapui").setup()
         end,
+        keys = {
+            { "<leader>dn", function () require("dap").new() end,
+                desc = "DAP: New session" },
+            { "<leader>dc", function () require("dap").continue() end,
+                desc = "DAP: Continue execution" },
+            { "<leader>dp", function () require("dap").pause() end,
+                desc = "DAP: Pause execution" },
+            { "<leader>ddc", function()
+                    local dap = require("dap")
+                    dap.disconnect()
+                    dap.close()
+                end, desc = "DAP: Disconnect and close session" },
+            { "<leader>db", function() require("dap").toggle_breakpoint() end,
+                desc = "DAP: Toggle breakpoint" },
+            { "<leader>dsi", function() require("dap").step_into() end,
+                desc = "DAP: Step into" },
+            { "<leader>dso", function() require("dap").step_over() end,
+                desc = "DAP: Step over" },
+            { "<leader>dr", function() require("dap").repl.open() end,
+                desc = "DAP: Open REPL" },
+        }
     },
+    -- {
+    --     "rcarriga/nvim-dap-ui",
+    --     opts = {},
+    --     keys = {
+    --         {
+    --             "<leader>du",
+    --             function()
+    --                 require("dapui").toggle()
+    --                 vim.cmd("Neotree toggle")
+    --             end,
+    --             desc = "DAP UI: Toggle"
+    --         },
+    --         {
+    --             "<leader>df",
+    --             function()
+    --                 require("dapui").float_element()
+    --             end,
+    --             desc = "DAP UI: Open float"
+    --         }
+    --     },
+    --     dependencies = {"mfussenegger/nvim-dap", "nvim-neotest/nvim-nio"}
+    -- },
     {
-        "rcarriga/nvim-dap-ui",
-        version = "^4.0",
-        dependencies = {"mfussenegger/nvim-dap", "nvim-neotest/nvim-nio"}
+        "igorlfs/nvim-dap-view",
+        opts = {},
+        keys = {
+            {
+                "<leader>du",
+                function()
+                    require("dap-view").toggle()
+                end,
+                desc = "DAP: Toggle DAP View"
+            }
+        }
     },
     "jay-babu/mason-nvim-dap.nvim",
     {
@@ -368,6 +559,7 @@ return {
                 function()
                     require("nvim-window").pick()
                 end,
+                desc = "Open window picker"
             },
         },
     },
