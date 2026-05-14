@@ -1,0 +1,19 @@
+theme "catppuccin-mocha"
+layout {
+    pane size=1 split_direction="vertical" {
+        pane size="75%" borderless=true {
+            plugin location="zellij:tab-bar"
+        }
+        pane size="25%" borderless=true {
+            plugin location="file:/Users/egoryakovenko/.config/zellij/plugins/zellij-datetime.wasm" {
+                timezone1 "GMT/+2"
+                default_timezone "GMT"
+                date_format "%a %m/%d"
+            }
+        }
+    }
+    pane borderless=true
+    pane size=1 borderless=true {
+        plugin location="status-bar"
+    }
+}
