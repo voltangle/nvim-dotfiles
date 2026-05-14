@@ -1,0 +1,10 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "ghidra": {
+      "type": "local",
+      "command": ["python3", "/Users/egoryakovenko/Documents/Ghidra/bridge_mcp_ghidra.py"],
+      "enabled": true,
+    },
+  },
+}
