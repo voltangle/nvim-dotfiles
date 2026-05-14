@@ -42,6 +42,8 @@ vim.api.nvim_create_autocmd("LspAttach", {
                 only = { 'quickfix', 'refactor', 'source'}}}
         end, 'Code Action')
         nmap("<leader>rn", vim.lsp.buf.rename, 'Rename')
+        nmap("<leader>gdl", vim.lsp.buf.declaration, "Go to DecLaration")
+        nmap("<leader>gdf", vim.lsp.buf.definition, "Go to DeFinition")
     end
 })
 
@@ -62,5 +64,16 @@ vim.api.nvim_create_autocmd("FileType", {
 	end,
 	group = swift_lsp,
 })
-
 vim.cmd.colorscheme("catppuccin")
+
+vim.lsp.config("pkl_lsp", {
+  cmd = { "pkl-lsp" },
+  filetypes = { "pkl" },
+  root_dir = function(bufnr, on_dir)
+    local name = vim.api.nvim_buf_get_name(bufnr)
+    local root = vim.fs.root(name, { "PklProject", ".git" })
+    on_dir(root)
+  end,
+  single_file_support = true,
+})
+vim.lsp.enable("pkl_lsp")

@@ -14,9 +14,9 @@ vim.opt.termguicolors = true
 vim.opt.laststatus = 3 -- global status line
 vim.opt.foldmethod = "indent" -- if gets in the way, replace with expr or syntax
 -- vim.opt.foldexpr = "nvim_treesitter#foldexpr()"
-vim.opt.foldenable = false
 vim.opt.colorcolumn = "90"
 vim.opt.modeline = false
+vim.opt.exrc = true
 
 vim.api.nvim_exec ('language en_US', true)
 

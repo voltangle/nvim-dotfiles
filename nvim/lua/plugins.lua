@@ -6,7 +6,7 @@ return {
         opts = {
             flavour = "mocha", -- latte, frappe, macchiato, mocha
             transparent_background = true,
-            background = { -- :h background
+            background = {
                 light = "latte",
                 dark = "macchiato",
             },
@@ -86,7 +86,20 @@ return {
                 filtered_items = {
                     visible = true 
                 },
-                hijack_netrw_behaviour = 'open_current'
+                hijack_netrw_behaviour = 'open_current',
+                window = {
+                    mappings = {
+                        ["<leader>p"] = "image_wezterm", -- " or another map
+                    },
+                },
+            },
+            commands = {
+                image_wezterm = function(state)
+                    local node = state.tree:get_node()
+                    if node.type == "file" then
+                        require("image_preview").PreviewImage(node.path)
+                    end
+                end,
             },
         },
         keys = {
@@ -101,9 +114,21 @@ return {
         }
     },
     {
-        "ggandor/leap.nvim",
-        enabled = false, -- TODO: Reenable once I get around to actually learning how to use this
-        dependencies = { "tpope/vim-repeat" }
+        url = "https://codeberg.org/andyg/leap.nvim",
+        lazy = false,
+        dependencies = { "tpope/vim-repeat" },
+        keys = {
+            {
+                "m",
+                "<Plug>(leap)",
+                mode = {"n", "x", "o"}
+            },
+            {
+                "M",
+                "<Plug>(leap-from-window)",
+                mode = {"n", "x", "o"}
+            }
+        }
     },
     {
         "folke/which-key.nvim",
@@ -123,7 +148,7 @@ return {
     "folke/neodev.nvim",
     {
         "nvim-telescope/telescope.nvim",
-        branch = "0.1.x",
+        version = "0.2.1",
         dependencies = { "nvim-lua/plenary.nvim" },
         keys = {
             {
@@ -139,60 +164,68 @@ return {
                     require("telescope.builtin").git_files()
                 end,
                 desc = "Telescope: Find in Git cache"
-            },
-            {
-                "<leader>ps",
-                function()
-                    require("telescope.builtin").grep_string({ search = vim.fn.input("Grep > ") })
-                end,
-                desc = "Telescope: Find by word"
-            },
+            }
         },
     },
     {
         "nvim-treesitter/nvim-treesitter",
         build = ":TSUpdate",
-        version = ">=0.9",
-        config = function()
-            require("nvim-treesitter.configs").setup({
-                -- A list of parser names, or "all"
-                ensure_installed = {
-                    "vimdoc",
-                    "swift",
-                    "javascript",
-                    "typescript",
-                    "c",
-                    "go",
-                    "zig",
-                    "lua",
-                    "rust",
-                    "cpp",
-                    "python",
-                    "qmljs",
-                    "qmldir",
-                    "gitcommit",
-                    "svelte",
-                },
+        branch = "main",
+        opts = {
 
-                -- Install parsers synchronously (only applied to `ensure_installed`)
-                sync_install = false,
+            -- Install parsers synchronously (only applied to `ensure_installed`)
+            sync_install = false,
 
-                -- Automatically install missing parsers when entering buffer
-                -- Recommendation: set to false if you don't have `tree-sitter` CLI installed locally
-                auto_install = true,
+            -- Automatically install missing parsers when entering buffer
+            -- Recommendation: set to false if you don't have `tree-sitter` CLI installed locally
+            auto_install = true,
 
-                highlight = {
-                    -- `false` will disable the whole extension
-                    enable = true,
+            highlight = {
+                -- `false` will disable the whole extension
+                enable = true,
 
-                    -- Setting this to true will run `:h syntax` and tree-sitter at the same time.
-                    -- Set this to `true` if you depend on 'syntax' being enabled (like for indentation).
-                    -- Using this option may slow down your editor, and you may see some duplicate highlights.
-                    -- Instead of true it can also be a list of languages
-                    additional_vim_regex_highlighting = false,
-                },
-            })
-        end
+                -- Setting this to true will run `:h syntax` and tree-sitter at the same time.
+                -- Set this to `true` if you depend on 'syntax' being enabled (like for indentation).
+                -- Using this option may slow down your editor, and you may see some duplicate highlights.
+                -- Instead of true it can also be a list of languages
+                additional_vim_regex_highlighting = false,
+            },
+        },
+        init = function()
+            vim.api.nvim_create_autocmd('FileType', { 
+                callback = function() 
+                    -- Enable treesitter highlighting and disable regex syntax
+                    pcall(vim.treesitter.start) 
+                    -- Enable treesitter-based indentation
+                    vim.bo.indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()" 
+                end, 
+            }) 
+            local ensureInstalled = {
+                "vimdoc",
+                "swift",
+                "javascript",
+                "typescript",
+                "c",
+                "go",
+                "zig",
+                "lua",
+                "rust",
+                "cpp",
+                "python",
+                "qmljs",
+                "qmldir",
+                "gitcommit",
+                "svelte",
+                "pkl",
+            }
+            local alreadyInstalled = require('nvim-treesitter.config').get_installed()
+            local parsersToInstall = vim.iter(ensureInstalled)
+                :filter(function(parser)
+                    return not vim.tbl_contains(alreadyInstalled, parser)
+                end)
+                :totable()
+            require('nvim-treesitter').install(parsersToInstall)
+        end,
     },
     {
         "mason-org/mason.nvim",
@@ -209,16 +242,15 @@ return {
                 "gopls",
                 "bashls",
                 "clangd",
-                "spectral",
                 "cssls",
                 "marksman",
-                "kotlin-lsp"
             }
         },
     },
     {
         "neovim/nvim-lspconfig",
         version = "^2.0",
+        lazy = false
     },
     {
         "AlexandrosAlexiou/kotlin.nvim",
@@ -433,13 +465,15 @@ return {
         dependencies = { "nvim-tree/nvim-web-devicons", opt = true },
         opts = {
             options = {
-                theme = "catppuccin",
+                theme = "auto",
                 section_separators = {
                     right = "",
                     left = ""
                 },
             },
             sections = {
+                lualine_c = { "filename", "selectioncount", "searchcount" },
+                lualine_x = {"lsp_status", "encoding", "fileformat", "filetype"},
                 lualine_y = {
                     "location"
                 },
@@ -460,7 +494,7 @@ return {
     },
     {
         "folke/trouble.nvim",
-        version = "^3.0",
+        version = "3.7.1",
         dependencies = { "nvim-tree/nvim-web-devicons" },
         opts = {},
         keys = {
@@ -499,7 +533,7 @@ return {
     "theprimeagen/vim-be-good",
     {
         "Bekaboo/dropbar.nvim",
-        version = "^9.0",
+        version = "^14.0",
         dependencies = { "nvim-telescope/telescope-fzf-native.nvim" },
     },
     {
@@ -526,7 +560,7 @@ return {
     },
     {
         "lewis6991/gitsigns.nvim",
-        version = "~0.9",
+        version = "~2.1",
         opts = {
             current_line_blame = true,
         },
@@ -583,10 +617,10 @@ return {
             { "<leader>dp", function () require("dap").pause() end,
                 desc = "DAP: Pause execution" },
             { "<leader>ddc", function()
-                    local dap = require("dap")
-                    dap.disconnect()
-                    dap.close()
-                end, desc = "DAP: Disconnect and close session" },
+                local dap = require("dap")
+                dap.disconnect()
+                dap.close()
+            end, desc = "DAP: Disconnect and close session" },
             { "<leader>db", function() require("dap").toggle_breakpoint() end,
                 desc = "DAP: Toggle breakpoint" },
             { "<leader>dsi", function() require("dap").step_into() end,
@@ -597,28 +631,6 @@ return {
                 desc = "DAP: Open REPL" },
         }
     },
-    -- {
-    --     "rcarriga/nvim-dap-ui",
-    --     opts = {},
-    --     keys = {
-    --         {
-    --             "<leader>du",
-    --             function()
-    --                 require("dapui").toggle()
-    --                 vim.cmd("Neotree toggle")
-    --             end,
-    --             desc = "DAP UI: Toggle"
-    --         },
-    --         {
-    --             "<leader>df",
-    --             function()
-    --                 require("dapui").float_element()
-    --             end,
-    --             desc = "DAP UI: Open float"
-    --         }
-    --     },
-    --     dependencies = {"mfussenegger/nvim-dap", "nvim-neotest/nvim-nio"}
-    -- },
     {
         "igorlfs/nvim-dap-view",
         opts = {},
@@ -668,5 +680,50 @@ return {
             "nvim-treesitter/nvim-treesitter",
             "nvim-tree/nvim-web-devicons"
         }
-    }
+    },
+    {
+        "chrisgrieser/nvim-origami",
+        event = "VeryLazy",
+        opts = {}, -- required even when using default config
+
+        -- recommended: disable vim's auto-folding
+        init = function()
+            vim.opt.foldlevel = 99
+            vim.opt.foldlevelstart = 99
+        end,
+    },
+    {
+        "josstei/whisk.nvim",
+        event = "VeryLazy",
+        opts = {
+            cursor = {
+                enabled = false,
+            },
+            scroll = {
+                duration = 150,
+                easing = "ease-in-out",
+                enabled = true,
+            },
+            keymaps = {
+                cursor = true,
+                scroll = true,
+            },
+            performance = {
+                enabled = false,
+                disable_syntax_during_scroll = true,
+                ignore_events = { "WinScrolled", "CursorMoved", "CursorMovedI" },
+                reduce_frame_rate = false,
+                frame_rate_threshold = 60,    -- not currently read by any code path
+                auto_enable_on_large_files = true,
+                large_file_threshold = 5000,
+            },
+        }
+    },
+    {
+        'adelarsq/image_preview.nvim',
+        event = 'VeryLazy',
+        config = function()
+            require("image_preview").setup({})
+        end
+    },
 }
